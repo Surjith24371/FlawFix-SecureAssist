@@ -1,0 +1,89 @@
+{
+  "name": "flawfix-secureassist",
+  "displayName": "FlawFix SecureAssist",
+  "description": "AI-Powered VS Code Extension for Real-Time Vulnerability Detection and Intelligent Secure Patch Generation",
+  "version": "1.0.0",
+  "publisher": "flawfix",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages",
+    "Education",
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:c",
+    "onLanguage:cpp",
+    "onLanguage:python",
+    "onLanguage:rust",
+    "onLanguage:java"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "flawfix.scanFile",
+        "title": "FlawFix: Scan Current File for Vulnerabilities",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "flawfix.showReport",
+        "title": "FlawFix: Generate & View Security Report",
+        "icon": "$(file-pdf)"
+      },
+      {
+        "command": "flawfix.clearDiagnostics",
+        "title": "FlawFix: Clear Security Warnings",
+        "icon": "$(clear-all)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "flawfix-container",
+          "title": "FlawFix SecureAssist",
+          "icon": "media/shield-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "flawfix-container": [
+        {
+          "type": "webview",
+          "id": "flawfix.sidebar",
+          "name": "Security Diagnostics & Patches"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "FlawFix SecureAssist",
+      "properties": {
+        "flawfix.backendUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8000",
+          "description": "URL of the FlawFix Python backend service"
+        },
+        "flawfix.autoScanOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically run security vulnerability analysis on file save"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.8"
+  }
+}

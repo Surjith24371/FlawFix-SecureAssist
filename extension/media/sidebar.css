@@ -1,0 +1,261 @@
+:root {
+  --ff-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --ff-critical: #ef4444;
+  --ff-high: #f97316;
+  --ff-medium: #f59e0b;
+  --ff-low: #3b82f6;
+  --ff-verified: #10b981;
+  --ff-card-bg: var(--vscode-sideBar-background, #1e1e1e);
+  --ff-card-border: var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
+}
+
+body {
+  font-family: var(--ff-font);
+  padding: 12px;
+  color: var(--vscode-foreground, #cccccc);
+  background-color: var(--vscode-sideBar-background, #1e1e1e);
+  margin: 0;
+  line-height: 1.4;
+  font-size: 12px;
+}
+
+/* Header & Actions */
+.header-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ff-card-border);
+}
+
+.header-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--vscode-sideBarTitle-foreground, #ffffff);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background-color: var(--vscode-button-background, #007acc);
+  color: var(--vscode-button-foreground, #ffffff);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background-color 0.15s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--vscode-button-hoverBackground, #0062a3);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--vscode-button-secondaryForeground, #cccccc);
+  border: 1px solid var(--ff-card-border);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.btn-secondary:hover {
+  background-color: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05));
+}
+
+.btn-success {
+  background-color: #059669;
+  color: #ffffff;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-success:hover {
+  background-color: #047857;
+}
+
+/* Scorecard Grid */
+.scorecard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.scorecard-item {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--ff-card-border);
+  border-radius: 6px;
+  padding: 6px 4px;
+  text-align: center;
+}
+
+.scorecard-value {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.scorecard-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: var(--vscode-descriptionForeground, #888888);
+}
+
+.critical-color { color: var(--ff-critical); }
+.high-color { color: var(--ff-high); }
+.medium-color { color: var(--ff-medium); }
+.low-color { color: var(--ff-low); }
+
+/* Vulnerability Card */
+.vuln-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vuln-card {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--ff-card-border);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.vuln-card.critical { border-left: 4px solid var(--ff-critical); }
+.vuln-card.high { border-left: 4px solid var(--ff-high); }
+.vuln-card.medium { border-left: 4px solid var(--ff-medium); }
+.vuln-card.low { border-left: 4px solid var(--ff-low); }
+
+.vuln-header {
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.vuln-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vuln-title {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--vscode-foreground, #ffffff);
+}
+
+.vuln-cwe {
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground, #999999);
+}
+
+.badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  text-transform: uppercase;
+}
+
+.badge-critical { background-color: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.badge-high { background-color: rgba(249, 115, 22, 0.2); color: #f97316; }
+.badge-medium { background-color: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+.badge-low { background-color: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+.badge-verified { background-color: rgba(16, 185, 129, 0.2); color: #10b981; }
+
+.vuln-body {
+  padding: 10px;
+  border-top: 1px solid var(--ff-card-border);
+  font-size: 11px;
+}
+
+.section-label {
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--vscode-descriptionForeground, #888888);
+  margin-top: 6px;
+  margin-bottom: 2px;
+}
+
+/* Patches */
+.patch-box {
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--ff-card-border);
+  border-radius: 4px;
+  padding: 8px;
+  margin-top: 8px;
+}
+
+.patch-header {
+  font-weight: 600;
+  color: #60a5fa;
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.patch-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Loading & Empty States */
+.status-box {
+  text-align: center;
+  padding: 20px 10px;
+  color: var(--vscode-descriptionForeground, #888888);
+}
+
+.spinner {
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top: 2px solid var(--vscode-progressBar-background, #007acc);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 10px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Code Snippet */
+pre {
+  background-color: var(--vscode-textCodeBlock-background, #141414);
+  padding: 6px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: 'Consolas', monospace;
+  font-size: 10px;
+  margin: 4px 0;
+  border: 1px solid var(--ff-card-border);
+}

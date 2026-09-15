@@ -1,0 +1,22 @@
+# Environment & Secrets
+.env
+*.env
+backend/.env
+
+# Node / Extension
+node_modules/
+extension/node_modules/
+extension/out/
+*.vsix
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+
+# IDE & OS
+.vscode/
+.DS_Store
+Thumbs.db
