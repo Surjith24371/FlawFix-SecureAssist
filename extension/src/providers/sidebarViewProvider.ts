@@ -44,8 +44,19 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                 case 'generateReport':
                     await this.handleGenerateReport();
                     break;
+                case 'goToLine':
+                    const activeEd = vscode.window.activeTextEditor;
+                    if (activeEd) {
+                        const targetLine = Math.max(0, (message.line || 1) - 1);
+                        const targetCol = Math.max(0, (message.column || 1) - 1);
+                        const targetPos = new vscode.Position(targetLine, targetCol);
+                        activeEd.selection = new vscode.Selection(targetPos, targetPos);
+                        activeEd.revealRange(new vscode.Range(targetPos, targetPos), vscode.TextEditorRevealType.InCenter);
+                    }
+                    break;
             }
         });
+
 
         if (this.latestAnalysis) {
             this.sendAnalysisToWebview(this.latestAnalysis);
@@ -111,7 +122,16 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     }
 
     private async handleApplyAndVerifyPatch(patchCode: string, functionName: string, vulnId: string) {
-        const editor = vscode.window.activeTextEditor;
+        let editor = vscode.window.activeTextEditor;
+
+        // If the active editor is the diff preview (flawfix-patch://), locate the underlying file editor
+        if (editor && editor.document.uri.scheme === 'flawfix-patch') {
+            const visible = vscode.window.visibleTextEditors.find(e => e.document.uri.scheme === 'file');
+            if (visible) {
+                editor = visible;
+            }
+        }
+
         if (!editor) {
             vscode.window.showErrorMessage('No active editor open to apply patch.');
             return;
@@ -119,7 +139,16 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
         const document = editor.document;
         const originalCode = document.getText();
-        const language = document.languageId;
+        
+        // Resolve accurate language and filename
+        let language = document.languageId;
+        if ((!language || language === 'plaintext') && this.latestAnalysis && this.latestAnalysis.language) {
+            language = this.latestAnalysis.language;
+        }
+
+        const fileName = (this.latestAnalysis && this.latestAnalysis.file_name)
+            ? this.latestAnalysis.file_name
+            : (document.fileName.split(/[\\/]/).pop() || 'source_code');
 
         vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
@@ -132,18 +161,24 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                     patchCode,
                     functionName,
                     language,
-                    vulnId
+                    vulnId,
+                    fileName
                 );
 
                 if (verifyRes.is_verified) {
-                    // Apply verified code to editor document
+                    // Apply verified code to editor document via WorkspaceEdit for maximum reliability
+                    const edit = new vscode.WorkspaceEdit();
                     const fullRange = new vscode.Range(
                         document.positionAt(0),
                         document.positionAt(originalCode.length)
                     );
-                    await editor.edit(editBuilder => {
-                        editBuilder.replace(fullRange, verifyRes.verified_code);
-                    });
+                    edit.replace(document.uri, fullRange, verifyRes.verified_code);
+                    const applied = await vscode.workspace.applyEdit(edit);
+                    if (!applied) {
+                        await editor.edit(editBuilder => {
+                            editBuilder.replace(fullRange, verifyRes.verified_code);
+                        });
+                    }
 
                     await document.save();
 

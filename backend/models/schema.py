@@ -7,6 +7,10 @@ class SyntaxErrorItem(BaseModel):
     message: str = Field(..., description="Error message description")
     severity: str = Field("error", description="'error' or 'warning'")
     source: Optional[str] = Field(None, description="Compiler or validator source")
+    error_type: Optional[str] = Field("SyntaxError", description="Error category or type")
+    explanation: Optional[str] = Field(None, description="Clear human-readable explanation")
+    original_message: Optional[str] = Field(None, description="Original raw compiler/parser diagnostic message")
+
 
 class SyntaxValidationResult(BaseModel):
     is_valid: bool = Field(..., description="True if no syntax errors were found")

@@ -65,7 +65,7 @@ def validate_syntax(request: CompileRequest):
     """
     Validates code syntax without generating LLVM IR.
     """
-    detected_lang = compiler_manager.detect_language(request.language, request.file_name)
+    detected_lang = compiler_manager.detect_language(request.language, request.file_name, code=request.code)
     compiler = compiler_manager.get_compiler(detected_lang)
     result = compiler.validate_syntax(request.code, request.file_name)
     return result
@@ -91,7 +91,7 @@ def extract_isevc(request: iSeVCRequest):
     2. Compiles to LLVM IR (or uses provided IR)
     3. Extracts Intermediate Semantic Vulnerability Contexts (iSeVC)
     """
-    detected_lang = compiler_manager.detect_language(request.language, request.file_name)
+    detected_lang = compiler_manager.detect_language(request.language, request.file_name, code=request.code)
 
     # If IR code is directly provided
     if request.ir_code and request.ir_code.strip():

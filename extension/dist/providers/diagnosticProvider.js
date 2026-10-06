@@ -16,8 +16,10 @@ class DiagnosticProvider {
                 const colIndex = Math.max(0, err.column - 1);
                 const line = document.lineAt(Math.min(lineIndex, document.lineCount - 1));
                 const range = new vscode.Range(lineIndex, colIndex, lineIndex, line.text.length);
-                const diagnostic = new vscode.Diagnostic(range, `[FlawFix Syntax Error] ${err.message}`, vscode.DiagnosticSeverity.Error);
-                diagnostic.source = 'FlawFix Compiler';
+                const typeStr = err.error_type ? `[${err.error_type}] ` : '';
+                const explStr = err.explanation ? `\n\nExplanation: ${err.explanation}` : '';
+                const diagnostic = new vscode.Diagnostic(range, `[FlawFix Syntax Error] ${typeStr}${err.message}${explStr}`, vscode.DiagnosticSeverity.Error);
+                diagnostic.source = err.source || 'FlawFix Compiler';
                 diagnostics.push(diagnostic);
             }
         }

@@ -31,11 +31,26 @@ class iSeVCBuilder:
         # Step 1: Parse functions & instructions
         raw_functions = self.parser.parse_functions(ir_text)
 
-        # Step 2: Build CFG & Trace data dependencies for each function
+        # Step 2: Early prune of compiler internal & stdlib inline functions before CFG building
+        STDLIB_INLINES = {
+            "sprintf", "printf", "fprintf", "snprintf", "vprintf", "vsprintf", "vsnprintf",
+            "sscanf", "scanf", "fscanf", "__local_stdio_printf_options", "__local_stdio_scanf_options"
+        }
+        
+        target_functions = [
+            f for f in raw_functions 
+            if f.function_name not in STDLIB_INLINES 
+            and not f.function_name.startswith("__") 
+            and not f.function_name.startswith("llvm.")
+            and not (f.function_name.startswith("_") and f.function_name not in ("_main", "_start"))
+        ]
+        if not target_functions:
+            target_functions = raw_functions
+
         enhanced_functions: List[FunctionSemanticContext] = []
         all_data_flows = []
 
-        for func in raw_functions:
+        for func in target_functions:
             func_cfg = self.cfg_builder.build_cfg(func)
             flows = self.cfg_builder.trace_data_dependencies(func_cfg)
             all_data_flows.extend(flows)
@@ -60,21 +75,7 @@ class iSeVCBuilder:
                 summary_sections.append(f"  {g}")
             summary_sections.append("")
 
-        STDLIB_INLINES = {
-            "sprintf", "printf", "fprintf", "snprintf", "vprintf", "vsprintf", "vsnprintf",
-            "sscanf", "scanf", "fscanf", "__local_stdio_printf_options", "__local_stdio_scanf_options"
-        }
-        
-        user_functions = [
-            f for f in enhanced_functions 
-            if f.function_name not in STDLIB_INLINES 
-            and not f.function_name.startswith("__") 
-            and not f.function_name.startswith("llvm.")
-            and not (f.function_name.startswith("_") and f.function_name not in ("_main", "_start"))
-        ]
-        
-        if not user_functions:
-            user_functions = enhanced_functions
+        user_functions = enhanced_functions
 
         for func in user_functions:
             summary_sections.append(f"--- FUNCTION: @{func.function_name} ({func.return_type}) ---")

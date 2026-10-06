@@ -6,7 +6,7 @@ class VerifyPatchRequest(BaseModel):
     original_code: str = Field(..., description="Original vulnerable source code")
     patch_code: str = Field(..., description="Proposed replacement function or code patch")
     function_name: Optional[str] = Field(None, description="Name of the function being replaced")
-    language: str = Field("c", description="Programming language (c, cpp, python, rust, java)")
+    language: Optional[str] = Field(None, description="Programming language (c, cpp, python, rust, java)")
     file_name: Optional[str] = Field(None, description="Original filename")
     vulnerability_id: Optional[str] = Field(None, description="Target vulnerability ID to verify")
 

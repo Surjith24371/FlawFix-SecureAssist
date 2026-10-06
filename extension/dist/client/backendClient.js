@@ -31,13 +31,14 @@ class BackendClient {
         });
         return res.data;
     }
-    async verifyPatch(originalCode, patchCode, functionName, language, vulnId) {
+    async verifyPatch(originalCode, patchCode, functionName, language, vulnId, fileName) {
         const res = await this.client.post('/api/verify-patch', {
             original_code: originalCode,
             patch_code: patchCode,
             function_name: functionName,
             language,
-            vulnerability_id: vulnId
+            vulnerability_id: vulnId,
+            file_name: fileName
         });
         return res.data;
     }

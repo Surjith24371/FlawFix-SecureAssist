@@ -17,6 +17,7 @@ class PythonCompiler(BaseCompiler):
     def validate_syntax(self, code: str, file_name: Optional[str] = None) -> SyntaxValidationResult:
         """
         Validates Python syntax using Python's built-in AST parser.
+        Extracts exact line, column, error category, and plain-English explanation.
         """
         errors = []
         try:
@@ -27,19 +28,60 @@ class PythonCompiler(BaseCompiler):
                 warnings=[],
                 raw_output="Syntax validation passed."
             )
-        except SyntaxError as e:
+        except IndentationError as e:
+            msg = e.msg or "Indentation error"
+            snippet = e.text.strip() if e.text else ""
             errors.append(SyntaxErrorItem(
                 line=e.lineno or 1,
                 column=e.offset or 1,
-                message=f"{e.msg}: {e.text.strip() if e.text else ''}",
+                message=f"{msg}: {snippet}" if snippet else msg,
                 severity="error",
-                source="python_ast"
+                source="python_ast",
+                error_type="IndentationError",
+                explanation="Inconsistent indentation or unindent does not match any outer indentation level.",
+                original_message=f"IndentationError: {msg} at line {e.lineno}, column {e.offset}"
             ))
             return SyntaxValidationResult(
                 is_valid=False,
                 errors=errors,
                 warnings=[],
-                raw_output=f"SyntaxError: {e.msg} at line {e.lineno}, column {e.offset}"
+                raw_output=f"IndentationError: {msg} at line {e.lineno}, column {e.offset}"
+            )
+        except SyntaxError as e:
+            msg = e.msg or "Invalid syntax"
+            snippet = e.text.strip() if e.text else ""
+            
+            err_type = "SyntaxError"
+            explanation = "Python encountered a syntax error."
+            msg_l = msg.lower()
+            if "expected ':'" in msg_l:
+                err_type = "MissingColon"
+                explanation = "Missing colon ':' at the end of block statement (e.g. def, if, for, while, class)."
+            elif "was never closed" in msg_l:
+                err_type = "UnclosedDelimiter"
+                explanation = f"Delimiter {msg}."
+            elif "unterminated string" in msg_l or "eol while scanning string" in msg_l:
+                err_type = "UnterminatedString"
+                explanation = "String literal was opened but never terminated with a matching quote."
+            elif "invalid syntax" in msg_l:
+                err_type = "InvalidSyntax"
+                explanation = "Invalid Python syntax or unexpected token."
+
+            errors.append(SyntaxErrorItem(
+                line=e.lineno or 1,
+                column=e.offset or 1,
+                message=f"{msg}: {snippet}" if snippet else msg,
+                severity="error",
+                source="python_ast",
+                error_type=err_type,
+                explanation=explanation,
+                original_message=f"SyntaxError: {msg} at line {e.lineno}, column {e.offset}"
+            ))
+            return SyntaxValidationResult(
+                is_valid=False,
+                errors=errors,
+                warnings=[],
+                raw_output=f"SyntaxError: {msg} at line {e.lineno}, column {e.offset}"
             )
         except Exception as e:
             errors.append(SyntaxErrorItem(
@@ -47,7 +89,10 @@ class PythonCompiler(BaseCompiler):
                 column=1,
                 message=f"Validation error: {str(e)}",
                 severity="error",
-                source="python_ast"
+                source="python_ast",
+                error_type="InternalError",
+                explanation=str(e),
+                original_message=str(e)
             ))
             return SyntaxValidationResult(
                 is_valid=False,
@@ -56,18 +101,20 @@ class PythonCompiler(BaseCompiler):
                 raw_output=str(e)
             )
 
-    def generate_llvm_ir(self, code: str, file_name: Optional[str] = None) -> LLVMIRResult:
+    def generate_llvm_ir(self, code: str, file_name: Optional[str] = None, already_validated: bool = False) -> LLVMIRResult:
         """
         Generates LLVM IR or Semantic AST-IR representation for Python.
         """
-        syntax_res = self.validate_syntax(code, file_name)
-        if not syntax_res.is_valid:
-            error_msgs = "; ".join([f"Line {e.line}: {e.message}" for e in syntax_res.errors])
-            return LLVMIRResult(
-                success=False,
-                ir_code="",
-                error=f"Python syntax validation failed: {error_msgs}"
-            )
+        if not already_validated:
+            syntax_res = self.validate_syntax(code, file_name)
+            if not syntax_res.is_valid:
+                error_msgs = "; ".join([f"Line {e.line}: {e.message}" for e in syntax_res.errors])
+                return LLVMIRResult(
+                    success=False,
+                    ir_code="",
+                    error=f"Python syntax validation failed: {error_msgs}"
+                )
+
 
         # Parse AST to extract function structure and symbol metadata
         parsed_ast = ast.parse(code)

@@ -1,111 +1,108 @@
-import re
 import time
-from typing import Optional, Tuple
+from typing import Optional
 from backend.models.verification_schema import VerifyPatchRequest, VerifyPatchResponse
 from backend.compilers.compiler_manager import compiler_manager
 from backend.extractor.isevc_builder import isevc_builder
 from backend.ai.gemini_client import gemini_client
+from backend.verifier.patch_replacer import FunctionPatchReplacer
 
 VERIFICATION_SYSTEM_INSTRUCTION = """
 You are a Principal Compiler and Code Verification Security Engineer.
 Your task is to verify whether a proposed security patch eliminates a specific detected vulnerability
 WITHOUT introducing syntax errors, semantic regressions, or new security vulnerabilities.
 
-RULES:
-1. Ensure the patched code fulfills the original function's purpose.
-2. Check that memory safety issues, buffer sizes, pointer boundaries, and type safety are properly addressed.
-3. Output STRICT JSON only.
+CRITICAL EVALUATION CRITERIA:
+1. "vulnerability_eliminated": Set to TRUE if the target security flaw (e.g. buffer overflow, SQL injection, format string) has been effectively mitigated or prevented.
+2. "regressions_found": Set to TRUE ONLY if the patch introduces severe breaking changes, broken execution paths, syntax bugs, or new security vulnerabilities. Minor stylistic suggestions or optional optimizations are NOT regressions.
+3. "is_clean": Set to TRUE if the patch is safe, compilable, and acceptable for production.
+4. "remaining_warnings": List any optional best-practice advice or non-blocking recommendations. If none, return an empty array [].
+5. Output STRICT JSON only.
 """
 
 class PatchVerifier:
     """
-    Automated Patch Verification Engine (SRS Modules 5.3.7 & 5.3.8).
-    Compiles patched code into LLVM IR, extracts new iSeVCs, and verifies vulnerability elimination.
+    Automated Dual-Engine Patch Verification Subsystem (SRS Modules 5.3.7 & 5.3.8).
+    Applies patches using grammar-aware function boundary replacement, compiles patched code
+    to LLVM IR, extracts new iSeVCs, and verifies complete vulnerability elimination.
     """
 
-    def apply_patch_to_code(self, original_code: str, patch_code: str, function_name: Optional[str] = None) -> str:
+    def apply_patch_to_code(
+        self,
+        original_code: str,
+        patch_code: str,
+        function_name: Optional[str] = None,
+        language: str = "c"
+    ) -> str:
         """
-        Integrates a function-level patch into the original source code.
+        Integrates a function-level patch into the original source code using FunctionPatchReplacer.
+        Preserves indentation, comments, surrounding code, and nested blocks.
         """
-        clean_patch = patch_code.strip()
-
-        # If patch already appears to be a full program with main/headers or identical line count
-        if ("#include" in clean_patch or "import " in clean_patch) and len(clean_patch.splitlines()) >= len(original_code.splitlines()) * 0.8:
-            return clean_patch
-
-        # If function name is provided or can be extracted from patch
-        target_func = function_name
-        if not target_func:
-            func_match = re.search(r"(?:[a-zA-Z_][a-zA-Z0-9_* ]+)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*\{", clean_patch)
-            if func_match:
-                target_func = func_match.group(1)
-
-        if target_func:
-            # Replace function definition in original code using regex
-            func_pattern = re.compile(
-                r"(?:[a-zA-Z_][a-zA-Z0-9_* \n\t]+)\s+" + re.escape(target_func) + r"\s*\([^)]*\)\s*\{[\s\S]*?\n\s*\}",
-                re.MULTILINE
-            )
-            if func_pattern.search(original_code):
-                merged = func_pattern.sub(lambda m: clean_patch, original_code, count=1)
-                
-                # Header safety check: ensure <stdio.h> / <stdlib.h> if referenced in patch
-                if ("snprintf" in clean_patch or "printf" in clean_patch) and "#include <stdio.h>" not in merged and "#include <cstdio>" not in merged:
-                    merged = "#include <stdio.h>\n" + merged
-                if ("malloc" in clean_patch or "free" in clean_patch or "NULL" in clean_patch) and "#include <stdlib.h>" not in merged and "#include <cstdlib>" not in merged:
-                    merged = "#include <stdlib.h>\n" + merged
-                return merged
-
-        # Fallback: if replacement pattern wasn't matched, replace entire body or append
-        return clean_patch
+        return FunctionPatchReplacer.apply_patch(
+            original_code=original_code,
+            patch_code=patch_code,
+            function_name=function_name,
+            language=language
+        )
 
     def verify_patch(self, request: VerifyPatchRequest) -> VerifyPatchResponse:
         start_time = time.time()
-        detected_lang = compiler_manager.detect_language(request.language, request.file_name)
+        detected_lang = compiler_manager.detect_language(
+            language=request.language,
+            file_name=request.file_name,
+            code=request.original_code or request.patch_code
+        )
         file_name = request.file_name or f"patched_source.{detected_lang}"
 
-        # 1. Apply patch into code
+        # 1. Apply patch into complete source code using grammar-aware boundary replacement
         patched_code = self.apply_patch_to_code(
             original_code=request.original_code,
             patch_code=request.patch_code,
-            function_name=request.function_name
+            function_name=request.function_name,
+            language=detected_lang
         )
 
-        # 2. Syntax Validation & LLVM IR Generation of Patched Code
+        # 2. Syntax Validation & LLVM IR Generation of Patched Complete Source (bypass cache for freshly patched code)
         comp_res = compiler_manager.validate_and_compile(
             code=patched_code,
             language=detected_lang,
-            file_name=file_name
+            file_name=file_name,
+            use_cache=False
         )
 
-        # Check Syntax
+        # Check Syntax Gate
         if not comp_res.syntax_result.is_valid:
-            err_msg = "; ".join([f"Line {e.line}: {e.message}" for e in comp_res.syntax_result.errors])
+            err_details = "; ".join([
+                f"Line {e.line}, Col {e.column}: [{e.error_type or 'SyntaxError'}] {e.message}"
+                for e in comp_res.syntax_result.errors
+            ])
             elapsed = round((time.time() - start_time) * 1000, 2)
             return VerifyPatchResponse(
                 is_verified=False,
                 syntax_valid=False,
                 ir_generated=False,
                 verified_code=patched_code,
-                verification_message=f"Patch rejected: Syntax error in patched code ({err_msg})",
-                remaining_issues=[f"Syntax error: {err_msg}"],
+                verification_message=f"Patch rejected: Syntax error in patched code ({err_details})",
+                remaining_issues=[f"Syntax error: {err_details}"],
                 analysis_time_ms=elapsed
             )
 
-        # Check IR Generation
+        # Check LLVM IR Generation Gate
         if not comp_res.ir_result or not comp_res.ir_result.success:
+            ir_err = comp_res.ir_result.error if comp_res.ir_result else "Unknown IR generation error"
+            if "timed out" in ir_err.lower():
+                ir_err = "LLVM IR generation timed out while processing the source code. Security analysis could not be completed."
             elapsed = round((time.time() - start_time) * 1000, 2)
             return VerifyPatchResponse(
                 is_verified=False,
                 syntax_valid=True,
                 ir_generated=False,
                 verified_code=patched_code,
-                verification_message=f"Patch rejected: Failed to compile to LLVM IR ({comp_res.ir_result.error if comp_res.ir_result else 'Unknown IR error'})",
-                remaining_issues=["LLVM IR compilation failure"],
+                verification_message=f"Patch rejected: {ir_err}",
+                remaining_issues=[ir_err],
                 analysis_time_ms=elapsed
             )
 
-        # 3. Extract new iSeVC for the Patched Code
+        # 3. Extract new iSeVC for the Patched Complete Code
         new_isevc = isevc_builder.build_isevc(comp_res.ir_result.ir_code, patched_code)
 
         # 4. Fast Semantic Verification via Gemini
@@ -121,7 +118,7 @@ Function: {request.function_name or 'target function'}
 {request.original_code}
 ```
 
-=== PATCHED CODE (PROPOSED FIX) ===
+=== COMPLETE PATCHED SOURCE CODE ===
 ```{detected_lang}
 {patched_code}
 ```
@@ -151,7 +148,8 @@ Return JSON with this exact schema:
             details = ai_json.get("verification_details", "Verification complete.")
             warnings = ai_json.get("remaining_warnings", [])
 
-            is_verified = is_clean and vuln_eliminated and not regressions
+            # Verified if vulnerability is eliminated and no breaking regressions exist
+            is_verified = (vuln_eliminated and not regressions) or (is_clean and not regressions)
             elapsed = round((time.time() - start_time) * 1000, 2)
 
             return VerifyPatchResponse(

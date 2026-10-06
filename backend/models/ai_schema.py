@@ -4,11 +4,14 @@ from backend.models.schema import SyntaxValidationResult
 from backend.models.isevc_schema import iSeVCResult
 
 class PatchCandidate(BaseModel):
-    patch_id: str = Field(..., description="Unique patch identifier (e.g. 'patch_1', 'patch_2')")
+    patch_id: str = Field(..., description="Unique patch identifier (e.g. 'patch_1', 'patch_2', 'patch_3')")
     title: str = Field(..., description="Short title describing the fix (e.g. 'Bounds-checked buffer copy')")
     description: str = Field(..., description="Explanation of how the patch fixes the security issue")
     patched_code: str = Field(..., description="Complete, secure replacement code for the affected function or block")
     optimization_notes: Optional[str] = Field(None, description="Performance or memory optimization details included in the patch")
+    approach_type: Optional[str] = Field(None, description="Specific mitigation strategy (e.g. 'Defensive Validation', 'Safe API Replacement', 'Architectural Refactor')")
+    is_recommended: Optional[bool] = Field(False, description="True if this patch is the primary recommended fix according to the remediation guidelines")
+
 
 class VulnerabilityFinding(BaseModel):
     vulnerability_id: str = Field(..., description="Unique vulnerability ID (e.g. 'VULN-001')")

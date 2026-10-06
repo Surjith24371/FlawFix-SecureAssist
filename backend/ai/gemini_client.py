@@ -14,11 +14,11 @@ class GeminiClient:
     """
 
     SUPPORTED_MODELS = [
-        "gemini-2.5-flash",
-        "gemini-3.6-flash",
+        "gemini-3.1-flash-lite",
+        "gemini-flash-lite-latest",
+        "gemini-3.1-flash-lite-preview",
         "gemini-3.5-flash",
-        "gemini-flash-latest",
-        "gemini-2.5-pro"
+        "gemini-flash-latest"
     ]
 
     def __init__(self, api_key: Optional[str] = None):
@@ -77,7 +77,9 @@ class GeminiClient:
 
                 except Exception as e:
                     last_exception = e
-                time.sleep(1.5 * attempt)
+                    if "404" in str(e) or "NOT_FOUND" in str(e):
+                        break
+                time.sleep(1.0 * attempt)
                 continue
 
         # If all models failed, raise the final exception

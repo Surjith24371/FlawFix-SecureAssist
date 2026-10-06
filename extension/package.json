@@ -18,7 +18,11 @@
     "onLanguage:cpp",
     "onLanguage:python",
     "onLanguage:rust",
-    "onLanguage:java"
+    "onLanguage:java",
+    "onView:flawfix.sidebar",
+    "onCommand:flawfix.scanFile",
+    "onCommand:flawfix.showReport",
+    "onCommand:flawfix.clearDiagnostics"
   ],
   "main": "./dist/extension.js",
   "contributes": {

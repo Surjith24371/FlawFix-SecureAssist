@@ -17,6 +17,8 @@ export interface VulnerabilityFinding {
         description: string;
         patched_code: string;
         optimization_notes?: string;
+        approach_type?: string;
+        is_recommended?: boolean;
     }>;
 }
 
@@ -33,17 +35,29 @@ export interface SecurityAnalysisResult {
     analysis_time_ms: number;
 }
 
+export interface SyntaxErrorItem {
+    line: number;
+    column: number;
+    message: string;
+    severity: string;
+    source?: string;
+    error_type?: string;
+    explanation?: string;
+    original_message?: string;
+}
+
 export interface FullAnalysisResponse {
     language: string;
     file_name?: string;
     syntax_result: {
         is_valid: boolean;
-        errors: Array<{ line: number; column: number; message: string; severity: string }>;
+        errors: SyntaxErrorItem[];
     };
     ir_generated: boolean;
     analysis_result?: SecurityAnalysisResult;
     error?: string;
 }
+
 
 export interface VerifyPatchResponse {
     is_verified: boolean;
@@ -100,14 +114,16 @@ export class BackendClient {
         patchCode: string,
         functionName: string,
         language: string,
-        vulnId?: string
+        vulnId?: string,
+        fileName?: string
     ): Promise<VerifyPatchResponse> {
         const res = await this.client.post<VerifyPatchResponse>('/api/verify-patch', {
             original_code: originalCode,
             patch_code: patchCode,
             function_name: functionName,
             language,
-            vulnerability_id: vulnId
+            vulnerability_id: vulnId,
+            file_name: fileName
         });
         return res.data;
     }

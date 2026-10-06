@@ -19,15 +19,18 @@ export class DiagnosticProvider {
                 const line = document.lineAt(Math.min(lineIndex, document.lineCount - 1));
                 const range = new vscode.Range(lineIndex, colIndex, lineIndex, line.text.length);
 
+                const typeStr = err.error_type ? `[${err.error_type}] ` : '';
+                const explStr = err.explanation ? `\n\nExplanation: ${err.explanation}` : '';
                 const diagnostic = new vscode.Diagnostic(
                     range,
-                    `[FlawFix Syntax Error] ${err.message}`,
+                    `[FlawFix Syntax Error] ${typeStr}${err.message}${explStr}`,
                     vscode.DiagnosticSeverity.Error
                 );
-                diagnostic.source = 'FlawFix Compiler';
+                diagnostic.source = err.source || 'FlawFix Compiler';
                 diagnostics.push(diagnostic);
             }
         }
+
 
         // 2. Security Vulnerabilities
         if (analysis.analysis_result && analysis.analysis_result.vulnerabilities) {
