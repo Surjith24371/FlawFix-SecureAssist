@@ -133,14 +133,16 @@ export class BackendClient {
         fileName: string,
         language: string,
         analysisResult: SecurityAnalysisResult,
-        verifiedPatches?: any[]
+        verifiedPatches?: any[],
+        originalCode?: string
     ): Promise<ReportResponse> {
         const res = await this.client.post<ReportResponse>('/api/generate-report', {
             project_name: projectName,
             file_name: fileName,
             language,
             analysis_result: analysisResult,
-            verified_patches: verifiedPatches || []
+            verified_patches: verifiedPatches || [],
+            original_code: originalCode
         });
         return res.data;
     }

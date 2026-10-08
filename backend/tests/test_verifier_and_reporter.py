@@ -161,5 +161,94 @@ class TestVerifierAndReporter(unittest.TestCase):
         print(f"[OK] Magic Header:   %PDF- (Verified Valid Document)")
         print("="*60)
 
+    def test_pdf_report_with_multiple_patches_and_original_code(self):
+        """Test generating report with multiple patch candidates, original code context, and verification audit."""
+        orig_code = """#include <stdio.h>
+#include <string.h>
+
+void process_buffer(const char *input) {
+    char target[32];
+    strcpy(target, input);
+    printf("Processed: %s\\n", target);
+}
+"""
+        patches = [
+            PatchCandidate(
+                patch_id="p1",
+                title="Option 1: Defensive Precondition Bounds Check",
+                approach_type="Defensive Validation",
+                is_recommended=False,
+                description="Validates that the input length is strictly less than target buffer capacity before copying.",
+                patched_code="void process_buffer(const char *input) {\n    char target[32];\n    if (!input || strlen(input) >= sizeof(target)) return;\n    strcpy(target, input);\n}",
+                optimization_notes="Early exit check avoids redundant stack operations."
+            ),
+            PatchCandidate(
+                patch_id="p2",
+                title="Option 2: Safe Standard API Replacement (Recommended)",
+                approach_type="Safe API Replacement",
+                is_recommended=True,
+                description="Replaces unsafe strcpy with bounded snprintf guaranteeing explicit capacity limits and null termination.",
+                patched_code="void process_buffer(const char *input) {\n    char target[32];\n    if (!input) return;\n    snprintf(target, sizeof(target), \"%s\", input);\n}",
+                optimization_notes="Single-pass bounded formatting with zero manual pointer arithmetic."
+            ),
+            PatchCandidate(
+                patch_id="p3",
+                title="Option 3: Dynamic Buffer Allocation",
+                approach_type="Architectural Refactor",
+                is_recommended=False,
+                description="Dynamically allocates heap buffer sized exactly to input length with guaranteed cleanup.",
+                patched_code="void process_buffer(const char *input) {\n    if (!input) return;\n    char *target = malloc(strlen(input) + 1);\n    if (target) { strcpy(target, input); free(target); }\n}",
+                optimization_notes="Removes arbitrary buffer size limits while ensuring memory safety."
+            )
+        ]
+
+        analysis = SecurityAnalysisResult(
+            is_vulnerable=True,
+            total_vulnerabilities=1,
+            vulnerabilities=[
+                VulnerabilityFinding(
+                    vulnerability_id="VULN-001",
+                    title="Stack-based Buffer Overflow in process_buffer",
+                    cwe_id="CWE-120: Buffer Copy without Checking Size of Input",
+                    severity="Critical",
+                    function_name="process_buffer",
+                    affected_lines=[6],
+                    root_cause="The function copies unbounded user data into a fixed 32-byte stack buffer via strcpy.",
+                    security_impact="Attackers can overwrite adjacent stack frames, hijack control flow, and execute arbitrary code.",
+                    recommendation="Replace unbounded strcpy with bounded snprintf or validate input length before copying.",
+                    patch_candidates=patches
+                )
+            ],
+            general_optimizations=[
+                OptimizationSuggestion(
+                    title="Compiler Stack Canary Alignment",
+                    description="Ensure function prologue contains stack protector canaries for defense-in-depth.",
+                    impact="Blocks stack smash exploitation attempts."
+                )
+            ],
+            summary="FlawFix detected 1 Critical vulnerability. Three secure patch alternatives were synthesized and verified.",
+            analysis_time_ms=850.0
+        )
+
+        req = ReportRequest(
+            project_name="Secure Buffer Project",
+            file_name="buffer_handler.c",
+            language="c",
+            analysis_result=analysis,
+            original_code=orig_code,
+            verified_patches=[
+                {
+                    "vulnerability_id": "VULN-001",
+                    "status": "VERIFIED",
+                    "message": "Re-compiled to LLVM IR and confirmed zero remaining vulnerabilities with zero regressions."
+                }
+            ]
+        )
+
+        res = pdf_report_generator.generate_report(req)
+        self.assertTrue(os.path.exists(res.file_path))
+        self.assertGreater(res.file_size_bytes, 2000)
+        print(f"\n[OK] Multi-Patch Report Generated Successfully: {res.file_name} ({res.file_size_bytes} bytes)")
+
 if __name__ == "__main__":
     unittest.main()

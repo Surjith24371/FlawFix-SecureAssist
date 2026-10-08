@@ -173,13 +173,14 @@ class SidebarViewProvider {
         }
         const fileName = editor?.document.fileName.split(/[\\/]/).pop() || 'project_file';
         const language = this.latestAnalysis.language || 'c';
+        const originalCode = editor ? editor.document.getText() : undefined;
         vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: 'FlawFix: Generating PDF Security Audit Report...',
             cancellable: false
         }, async () => {
             try {
-                const reportRes = await this.backendClient.generateReport('FlawFix Workspace', fileName, language, this.latestAnalysis.analysis_result, this.verifiedPatches);
+                const reportRes = await this.backendClient.generateReport('FlawFix Workspace', fileName, language, this.latestAnalysis.analysis_result, this.verifiedPatches, originalCode);
                 const downloadUrl = this.backendClient.getReportDownloadUrl(reportRes.download_url);
                 vscode.window.showInformationMessage(`✓ Report generated: ${reportRes.file_name} (${reportRes.file_size_bytes} bytes)`, 'Open Report PDF').then(selection => {
                     if (selection === 'Open Report PDF') {

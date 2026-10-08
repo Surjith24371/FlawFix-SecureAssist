@@ -212,6 +212,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
         const fileName = editor?.document.fileName.split(/[\\/]/).pop() || 'project_file';
         const language = this.latestAnalysis.language || 'c';
+        const originalCode = editor ? editor.document.getText() : undefined;
 
         vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
@@ -224,7 +225,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
                     fileName,
                     language,
                     this.latestAnalysis!.analysis_result!,
-                    this.verifiedPatches
+                    this.verifiedPatches,
+                    originalCode
                 );
 
                 const downloadUrl = this.backendClient.getReportDownloadUrl(reportRes.download_url);

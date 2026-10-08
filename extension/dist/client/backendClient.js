@@ -42,13 +42,14 @@ class BackendClient {
         });
         return res.data;
     }
-    async generateReport(projectName, fileName, language, analysisResult, verifiedPatches) {
+    async generateReport(projectName, fileName, language, analysisResult, verifiedPatches, originalCode) {
         const res = await this.client.post('/api/generate-report', {
             project_name: projectName,
             file_name: fileName,
             language,
             analysis_result: analysisResult,
-            verified_patches: verifiedPatches || []
+            verified_patches: verifiedPatches || [],
+            original_code: originalCode
         });
         return res.data;
     }
